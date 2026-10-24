@@ -4,7 +4,10 @@ const fs = require('fs');
 const jokesList = [
     "😂 Santosh: Yaar, biwi se jhagdne ke baad mujhe ek baat samajh aa gayi...\n\nPappu: Kya?\n\nSantosh: Ki jeet chahe kisi ki bhi ho, aakhir mein bartan humein hi saaf karne padte hain! 😜 ROFL",
     "🔥 Husband: Suno, agar main kho jaun toh tum kya karogi?\n\nWife: Main police mein report kar dungi aur kya!\n\nHusband (khush hokar): Aur agar main kisi doosri aurat ke sath mila toh?\n\nWife: Toh main police ko bolungi ki purana wala wapas nahi chahiye, naya hi theek hai! 🤣",
-    "😜 Santa aur Banta:\n\nSanta: Yaar, kal raat mere ghar chor aaya aur saari tijori khali karke chala gaya...\n\nBanta: Arre bhai, police mein report ki?\n\nSanta: Nahi yaar, khushi ke maare so gaya ki kam se kam kisi ne toh maana ki meri tijori mein kuch tha toh sahi! 😭😂"
+    "😜 Santa aur Banta:\n\nSanta: Yaar, kal raat mere ghar chor aaya aur saari tijori khali karke chala gaya...\n\nBanta: Arre bhai, police mein report ki?\n\nSanta: Nahi yaar, khushi ke maare so gaya ki kam se kam kisi ne toh maana ki meri tijori mein kuch tha toh sahi! 😭😂",
+    "😎 Teacher: Kal school kyun nahi aaye the?\n\nPappu: Sir, raste mein ek board laga tha jispe likha tha 'Aage School hai, Kripya dheere chalein'. Isiliye main poora din dheere-dheere hi chalta raha! 🐢😂",
+    "📱 Aaj ka gyaan:\n\nJo ladkiyan subah jaldi uth kar ghar ki safai karti hain...\n\nUnke pati WhatsApp par sabse zyada 'Good Morning' ke GIF bhejte hain! 😜😂",
+    "💥 Doctor: Agar jeena hai toh cigarette aur alcohol dono chhod do!\n\nPatient: Doctor sahab, iske baad kitne saal aur jiyunga?\n\nDoctor: Pata nahi, par jitne bhi din jiyoge, bahut lambe aur boring lagenge! 🤣"
 ];
 
 (async () => {
@@ -19,17 +22,28 @@ const jokesList = [
     await page.setViewport({ width: 390, height: 844 });
 
     try {
-        // Agar cookies file maujood hai, toh unhe load karein
-        if (fs.existsSync('cookies.json')) {
-            const cookiesString = fs.readFileSync('cookies.json', 'utf8');
-            const cookies = JSON.parse(cookiesString);
+        // Agar cookies file maujood hai, toh unhe load aur clean karein
+        if (fs.existsSync('fbccooky.json')) {
+            const cookiesString = fs.readFileSync('fbccooky.json', 'utf8');
+            let cookies = JSON.parse(cookiesString);
+            
+            // Puppeteer compatibility ke liye invalid/null fields hata dein
+            cookies = cookies.map(cookie => {
+                delete cookie.session;
+                delete cookie.storeId;
+                if (cookie.partitionKey === null) {
+                    delete cookie.partitionKey;
+                }
+                return cookie;
+            });
+
             await page.setCookie(...cookies);
-            console.log("Cookies loaded successfully!");
+            console.log("Cookies loaded and cleaned successfully!");
         } else {
             console.log("Cookies file not found!");
         }
 
-        // Direct Facebook composer par jayein (Login ki zaroorat nahi padegi)
+        // Direct Facebook composer par jayein
         console.log("Navigating to Facebook composer...");
         await page.goto('https://m.facebook.com/composer/', { waitUntil: 'networkidle2' });
         await new Promise(r => setTimeout(r, 4000));
