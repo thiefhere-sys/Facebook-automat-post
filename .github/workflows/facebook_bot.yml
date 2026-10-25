@@ -2,20 +2,21 @@ name: Facebook Auto Poster Bot
 
 on:
   schedule:
-    - cron: '0 */4 * * *' # Har 4 ghante mein ek baar run hoga
-  workflow_dispatch: # Manual run karne ke liye button mil jayega
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Install Dependencies
         run: npm install puppeteer
@@ -23,5 +24,5 @@ jobs:
       - name: Run Automation Script
         run: node bot.js
         env:
-          FB_EMAIL: ${{ secrets.FB_EMAIL }}
+          FB_USERNAME: ${{ secrets.FB_USERNAME }}
           FB_PASSWORD: ${{ secrets.FB_PASSWORD }}
