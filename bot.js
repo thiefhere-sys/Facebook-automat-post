@@ -36,31 +36,13 @@ const jokesList = [
         await page.type('input[name="email"]', username, { delay: 50 });
         await page.type('input[name="pass"]', password, { delay: 50 });
 
-        // Safe click using evaluate to bypass clickability issues
-        console.log("Clicking login button...");
-        const clicked = await page.evaluate(() => {
-            let btn = document.querySelector('button[type="submit"], input[type="submit"], button[name="login"]');
-            if (!btn) {
-                const buttons = Array.from(document.querySelectorAll('button, input'));
-                btn = buttons.find(b => {
-                    let text = b.innerText || b.value || '';
-                    return text.toLowerCase().includes('log in') || text.toLowerCase().includes('login');
-                });
-            }
-            if (btn) {
-                btn.click();
-                return true;
-            }
-            return false;
-        });
+        // Password type karne ke baad Enter press karein (sabse reliable method)
+        console.log("Pressing Enter to submit login...");
+        await Promise.all([
+            page.keyboard.press('Enter'),
+            page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {})
+        ]);
 
-        if (!clicked) {
-            // Fallback: Press Enter on password field
-            console.log("Button not found via evaluate, pressing Enter...");
-            await page.keyboard.press('Enter');
-        }
-
-        await page.waitForNavigation({ waitUntil: 'networkidle2' }).catch(() => {});
         await new Promise(r => setTimeout(r, 4000));
         console.log("Login attempted. Current URL:", page.url());
 
@@ -75,7 +57,13 @@ const jokesList = [
 
         const randomJoke = jokesList[Math.floor(Math.random() * jokesList.length)] + "\n\n#Funny #Jokes #DesiComedy";
 
-        const textBox = await page.$('div[contenteditable="true"], textarea');
+        // Text box dhoondhne ke liye thoda wait aur multiple selectors
+        let textBox = await page.$('div[contenteditable="true"], textarea, div[role="textbox"]');
+        if (!textBox) {
+            await new Promise(r => setTimeout(r, 3000));
+            textBox = await page.$('div[contenteditable="true"], textarea, div[role="textbox"]');
+        }
+
         if (textBox) {
             await textBox.click();
             await page.keyboard.type(randomJoke);
