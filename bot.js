@@ -2,11 +2,11 @@ const puppeteer = require('puppeteer');
 
 const jokesList = [
     "😂 Santosh: Yaar, biwi se jhagdne ke baad mujhe ek baat samajh aa gayi...\n\nPappu: Kya?\n\nSantosh: Ki jeet chahe kisi ki bhi ho, aakhir mein bartan humein hi saaf karne padte hain! 😜 ROFL",
-    "🔥 Husband: Suno, agar main kho jaun toh tum kya karogi?\n\nWife: Main police mein report kar dungi aur kya!\n\nHusband (khush hokar): Aur agar main kisi doosri aurat ke sath mila toh?\n\Wife: Toh main police ko bolungi ki purana wala wapas nahi chahiye, naya hi theek hai! 🤣",
+    "🔥 Husband: Suno, agar main kho jaun toh tum kya karogi?\n\nWife: Main police mein report kar dungi aur kya!\n\nHusband (khush hokar): Aur agar main kisi doosri aurat ke sath mila toh?\n\nWife: Toh main police ko bolungi ki purana wala wapas nahi chahiye, naya hi theek hai! 🤣",
     "😜 Santa aur Banta:\n\nSanta: Yaar, kal raat mere ghar chor aaya aur saari tijori khali karke chala gaya...\n\nBanta: Arre bhai, police mein report ki?\n\nSanta: Nahi yaar, khushi ke maare so gaya ki kam se kam kisi ne toh maana ki meri tijori mein kuch tha toh sahi! 😭😂",
     "😎 Teacher: Kal school kyun nahi aaye the?\n\nPappu: Sir, raste mein ek board laga tha jispe likha tha 'Aage School hai, Kripya dheere chalein'. Isiliye main poora din dheere-dheere hi chalta raha! 🐢😂",
     "📱 Aaj ka gyaan:\n\nJo ladkiyan subah jaldi uth kar ghar ki safai karti hain...\n\nUnke pati WhatsApp par sabse zyada 'Good Morning' ke GIF bhejte hain! 😜😂",
-    "💥 Doctor: Agar jeena hai toh cigarette aur alcohol dono chhod do!\n\nPatient: Doctor sahab, iske baad kitne saal aur jiyunga?\n\nDoctor: Pata nahi, par jitne bhi din jiyoge, bahut lambe aur boring lagenge! 🤣"
+    "💥 Doctor: Agar jeena hai toh cigarette aur alcohol dono chhod do!\n\.Patient: Doctor sahab, iske baad kitne saal aur jiyunga?\n\nDoctor: Pata nahi, par jitne bhi din jiyoge, bahut lambe aur boring lagenge! 🤣"
 ];
 
 (async () => {
@@ -24,7 +24,6 @@ const jokesList = [
         console.log("Navigating to Facebook login page...");
         await page.goto('https://m.facebook.com/login', { waitUntil: 'networkidle2' });
 
-        // GitHub Secrets se username aur password uthakar fill karein
         const username = process.env.FB_USERNAME;
         const password = process.env.FB_PASSWORD;
 
@@ -37,30 +36,38 @@ const jokesList = [
         await page.type('input[name="email"]', username, { delay: 50 });
         await page.type('input[name="pass"]', password, { delay: 50 });
 
-        // Login button par click karein
-        await Promise.all([
-            page.click('button[name="login"]'),
-            page.waitForNavigation({ waitUntil: 'networkidle2' }).catch(() => {})
-        ]);
+        // Robust login button selector & scanner
+        const loginBtn = await page.$('button[type="submit"], input[type="submit"], button[name="login"]');
+        if (loginBtn) {
+            await loginBtn.click();
+            console.log("Login button clicked!");
+        } else {
+            const buttons = await page.$$('button, input');
+            for (let btn of buttons) {
+                let text = await page.evaluate(el => el.innerText || el.value, btn);
+                if (text && (text.includes('Log In') || text.includes('Log in') || text.includes('login'))) {
+                    await btn.click();
+                    console.log("Login button found via text and clicked!");
+                    break;
+                }
+            }
+        }
 
+        await page.waitForNavigation({ waitUntil: 'networkidle2' }).catch(() => {});
         await new Promise(r => setTimeout(r, 4000));
         console.log("Login attempted. Current URL:", page.url());
 
-        // Agar Facebook OTP / Security checkpoint par roke toh yahan pata chal jayega
         if (page.url().includes('checkpoint') || page.url().includes('login')) {
             console.log("Login failed or Security checkpoint detected (OTP/Two-Factor required).");
             return;
         }
 
-        // Direct Facebook composer par jayein
         console.log("Navigating to Facebook composer...");
         await page.goto('https://m.facebook.com/composer/', { waitUntil: 'networkidle2' });
         await new Promise(r => setTimeout(r, 4000));
 
-        // Random joke select karein
         const randomJoke = jokesList[Math.floor(Math.random() * jokesList.length)] + "\n\n#Funny #Jokes #DesiComedy";
 
-        // Text box mein joke type karein
         const textBox = await page.$('div[contenteditable="true"], textarea');
         if (textBox) {
             await textBox.click();
@@ -68,7 +75,6 @@ const jokesList = [
             console.log("Joke typed into box.");
             await new Promise(r => setTimeout(r, 2000));
 
-            // Post submit button click karein
             const postButtons = await page.$$('button, span, div');
             for (let btn of postButtons) {
                 let text = await page.evaluate(el => el.innerText, btn);
