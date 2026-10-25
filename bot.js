@@ -1,9 +1,8 @@
 const puppeteer = require('puppeteer');
-const fs = require('fs');
 
 const jokesList = [
     "😂 Santosh: Yaar, biwi se jhagdne ke baad mujhe ek baat samajh aa gayi...\n\nPappu: Kya?\n\nSantosh: Ki jeet chahe kisi ki bhi ho, aakhir mein bartan humein hi saaf karne padte hain! 😜 ROFL",
-    "🔥 Husband: Suno, agar main kho jaun toh tum kya karogi?\n\nWife: Main police mein report kar dungi aur kya!\n\nHusband (khush hokar): Aur agar main kisi doosri aurat ke sath mila toh?\n\nWife: Toh main police ko bolungi ki purana wala wapas nahi chahiye, naya hi theek hai! 🤣",
+    "🔥 Husband: Suno, agar main kho jaun toh tum kya karogi?\n\nWife: Main police mein report kar dungi aur kya!\n\nHusband (khush hokar): Aur agar main kisi doosri aurat ke sath mila toh?\n\Wife: Toh main police ko bolungi ki purana wala wapas nahi chahiye, naya hi theek hai! 🤣",
     "😜 Santa aur Banta:\n\nSanta: Yaar, kal raat mere ghar chor aaya aur saari tijori khali karke chala gaya...\n\nBanta: Arre bhai, police mein report ki?\n\nSanta: Nahi yaar, khushi ke maare so gaya ki kam se kam kisi ne toh maana ki meri tijori mein kuch tha toh sahi! 😭😂",
     "😎 Teacher: Kal school kyun nahi aaye the?\n\nPappu: Sir, raste mein ek board laga tha jispe likha tha 'Aage School hai, Kripya dheere chalein'. Isiliye main poora din dheere-dheere hi chalta raha! 🐢😂",
     "📱 Aaj ka gyaan:\n\nJo ladkiyan subah jaldi uth kar ghar ki safai karti hain...\n\nUnke pati WhatsApp par sabse zyada 'Good Morning' ke GIF bhejte hain! 😜😂",
@@ -22,37 +21,41 @@ const jokesList = [
     await page.setViewport({ width: 390, height: 844 });
 
     try {
-        // Agar cookies file maujood hai, toh unhe load aur clean karein
-        if (fs.existsSync('fbccooky.json')) {
-            const cookiesString = fs.readFileSync('fbccooky.json', 'utf8');
-            let cookies = JSON.parse(cookiesString);
-            
-            // Puppeteer compatibility ke liye invalid/null fields hata dein
-            cookies = cookies.map(cookie => {
-                delete cookie.session;
-                delete cookie.storeId;
-                if (cookie.partitionKey === null) {
-                    delete cookie.partitionKey;
-                }
-                return cookie;
-            });
+        console.log("Navigating to Facebook login page...");
+        await page.goto('https://m.facebook.com/login', { waitUntil: 'networkidle2' });
 
-            await page.setCookie(...cookies);
-            console.log("Cookies loaded and cleaned successfully!");
-        } else {
-            console.log("Cookies file not found!");
+        // GitHub Secrets se username aur password uthakar fill karein
+        const username = process.env.FB_USERNAME;
+        const password = process.env.FB_PASSWORD;
+
+        if (!username || !password) {
+            console.error("Error: FB_USERNAME or FB_PASSWORD environment variables are missing!");
+            return;
+        }
+
+        console.log("Entering credentials...");
+        await page.type('input[name="email"]', username, { delay: 50 });
+        await page.type('input[name="pass"]', password, { delay: 50 });
+
+        // Login button par click karein
+        await Promise.all([
+            page.click('button[name="login"]'),
+            page.waitForNavigation({ waitUntil: 'networkidle2' }).catch(() => {})
+        ]);
+
+        await new Promise(r => setTimeout(r, 4000));
+        console.log("Login attempted. Current URL:", page.url());
+
+        // Agar Facebook OTP / Security checkpoint par roke toh yahan pata chal jayega
+        if (page.url().includes('checkpoint') || page.url().includes('login')) {
+            console.log("Login failed or Security checkpoint detected (OTP/Two-Factor required).");
+            return;
         }
 
         // Direct Facebook composer par jayein
         console.log("Navigating to Facebook composer...");
         await page.goto('https://m.facebook.com/composer/', { waitUntil: 'networkidle2' });
         await new Promise(r => setTimeout(r, 4000));
-
-        // Check karein ki login page par toh redirect nahi ho gaya
-        if (page.url().includes('login')) {
-            console.log("Cookies expired or invalid. Manual login required.");
-            return;
-        }
 
         // Random joke select karein
         const randomJoke = jokesList[Math.floor(Math.random() * jokesList.length)] + "\n\n#Funny #Jokes #DesiComedy";
