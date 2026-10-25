@@ -17,11 +17,11 @@ jobs:
         with:
           node-version: '18'
 
+      - name: Create Cookies File from Secret
+        run: echo '${{ secrets.FB_COOKIES }}' > fbccooky.json
+
       - name: Install Dependencies
         run: npm install puppeteer
 
       - name: Run Automation Script
         run: node bot.js
-        env:
-          FB_USERNAME: ${{ secrets.FB_USERNAME }}
-          FB_PASSWORD: ${{ secrets.FB_PASSWORD }}
