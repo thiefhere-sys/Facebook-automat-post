@@ -2,11 +2,11 @@ const puppeteer = require('puppeteer');
 
 const jokesList = [
     "😂 Santosh: Yaar, biwi se jhagdne ke baad mujhe ek baat samajh aa gayi...\n\nPappu: Kya?\n\nSantosh: Ki jeet chahe kisi ki bhi ho, aakhir mein bartan humein hi saaf karne padte hain! 😜 ROFL",
-    "🔥 Husband: Suno, agar main kho jaun toh tum kya karogi?\n\nWife: Main police mein report kar dungi aur kya!\n\nHusband (khush hokar): Aur agar main kisi doosri aurat ke sath mila toh?\n\nWife: Toh main police ko bolungi ki purana wala wapas nahi chahiye, naya hi theek hai! 🤣",
+    "🔥 Husband: Suno, agar main kho jaun toh tum kya karogi?\n\nWife: Main police mein report kar dungi aur kya!\n\nHusband (khush hokar): Aur agar main kisi doosri aurat ke sath mila toh?\n\Wife: Toh main police ko bolungi ki purana wala wapas nahi chahiye, naya hi theek hai! 🤣",
     "😜 Santa aur Banta:\n\nSanta: Yaar, kal raat mere ghar chor aaya aur saari tijori khali karke chala gaya...\n\nBanta: Arre bhai, police mein report ki?\n\nSanta: Nahi yaar, khushi ke maare so gaya ki kam se kam kisi ne toh maana ki meri tijori mein kuch tha toh sahi! 😭😂",
     "😎 Teacher: Kal school kyun nahi aaye the?\n\nPappu: Sir, raste mein ek board laga tha jispe likha tha 'Aage School hai, Kripya dheere chalein'. Isiliye main poora din dheere-dheere hi chalta raha! 🐢😂",
     "📱 Aaj ka gyaan:\n\nJo ladkiyan subah jaldi uth kar ghar ki safai karti hain...\n\nUnke pati WhatsApp par sabse zyada 'Good Morning' ke GIF bhejte hain! 😜😂",
-    "💥 Doctor: Agar jeena hai toh cigarette aur alcohol dono chhod do!\n\.Patient: Doctor sahab, iske baad kitne saal aur jiyunga?\n\nDoctor: Pata nahi, par jitne bhi din jiyoge, bahut lambe aur boring lagenge! 🤣"
+    "💥 Doctor: Agar jeena hai toh cigarette aur alcohol dono chhod do!\n\nPatient: Doctor sahab, iske baad kitne saal aur jiyunga?\n\nDoctor: Pata nahi, par jitne bhi din jiyoge, bahut lambe aur boring lagenge! 🤣"
 ];
 
 (async () => {
@@ -36,21 +36,28 @@ const jokesList = [
         await page.type('input[name="email"]', username, { delay: 50 });
         await page.type('input[name="pass"]', password, { delay: 50 });
 
-        // Robust login button selector & scanner
-        const loginBtn = await page.$('button[type="submit"], input[type="submit"], button[name="login"]');
-        if (loginBtn) {
-            await loginBtn.click();
-            console.log("Login button clicked!");
-        } else {
-            const buttons = await page.$$('button, input');
-            for (let btn of buttons) {
-                let text = await page.evaluate(el => el.innerText || el.value, btn);
-                if (text && (text.includes('Log In') || text.includes('Log in') || text.includes('login'))) {
-                    await btn.click();
-                    console.log("Login button found via text and clicked!");
-                    break;
-                }
+        // Safe click using evaluate to bypass clickability issues
+        console.log("Clicking login button...");
+        const clicked = await page.evaluate(() => {
+            let btn = document.querySelector('button[type="submit"], input[type="submit"], button[name="login"]');
+            if (!btn) {
+                const buttons = Array.from(document.querySelectorAll('button, input'));
+                btn = buttons.find(b => {
+                    let text = b.innerText || b.value || '';
+                    return text.toLowerCase().includes('log in') || text.toLowerCase().includes('login');
+                });
             }
+            if (btn) {
+                btn.click();
+                return true;
+            }
+            return false;
+        });
+
+        if (!clicked) {
+            // Fallback: Press Enter on password field
+            console.log("Button not found via evaluate, pressing Enter...");
+            await page.keyboard.press('Enter');
         }
 
         await page.waitForNavigation({ waitUntil: 'networkidle2' }).catch(() => {});
@@ -75,15 +82,18 @@ const jokesList = [
             console.log("Joke typed into box.");
             await new Promise(r => setTimeout(r, 2000));
 
-            const postButtons = await page.$$('button, span, div');
-            for (let btn of postButtons) {
-                let text = await page.evaluate(el => el.innerText, btn);
-                if (text && (text.trim() === 'पोस्ट करें' || text.trim() === 'Post')) {
-                    await btn.click();
-                    console.log("Post button clicked!");
-                    break;
+            // Post submit button click using safe evaluation
+            await page.evaluate(() => {
+                const elements = Array.from(document.querySelectorAll('button, span, div, a'));
+                const submitBtn = elements.find(el => {
+                    const text = el.innerText ? el.innerText.trim() : '';
+                    return text === 'पोस्ट करें' || text === 'Post';
+                });
+                if (submitBtn) {
+                    submitBtn.click();
                 }
-            }
+            });
+            console.log("Post submit triggered!");
 
             await new Promise(r => setTimeout(r, 5000));
         } else {
